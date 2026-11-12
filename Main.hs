@@ -98,7 +98,14 @@ substs p = map (zip vs) (bools (length vs))
 truthTable :: Prop -> [(Subst, Bool)]
 truthTable p = [(s, eval s p) | s <- substs p]
 
--- read-parse-print loop
+classify :: Prop -> String
+classify p
+  | and results = "TAUTOLOGY"
+  | or results  = "CONTINGENT"
+  | otherwise   = "CONTRADICTION"
+  where results = map snd (truthTable p)
+
+-- read-classify-print loop
 main :: IO ()
 main
   = do txt <- getContents
@@ -106,11 +113,11 @@ main
 
 calculator :: [String] -> IO ()
 calculator []     = return ()
-calculator (l:ls) = do putStrLn (showParse l)
+calculator (l:ls) = do putStrLn (evaluate l)
                        calculator ls
 
-showParse :: String -> String
-showParse txt
+evaluate :: String -> String
+evaluate txt
   = case parse prop txt of
-      [ (p, "") ] -> show p
+      [ (p, "") ] -> classify p
       _           -> "parse error; try again"
