@@ -1,0 +1,24 @@
+F
+!T
+!F
+T|F
+T&F
+!!a
+a|b
+a&!a
+(a|b)&!a&!b
+a|b|c|!a
+!(a&b)|a&b
+!(a|b)&a
+x|y&z
+!a&!b|a|b
+((p))
+p&q|!p|!q
+!(p|!p)
+(a&b)|(c&d)
+a&
+(a|b
+ab
+A
+a|
+a b
