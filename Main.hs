@@ -1,35 +1,18 @@
-{-
-  A logical calculator for propositions
-  Based on the arithmetic calculator from Lecture 11
-  (Chapter 8 of "Programming in Haskell" by Graham Hutton).
--}
+-- Logical calculator: classifies propositions using truth tables
 module Main where
 
 import Parsing
 import Data.Char
 
---
--- a data type for logical propositions
---
-data Prop = Const Bool        -- constants (True/False)
-          | Var Char          -- variables
-          | And Prop Prop     -- conjunction
-          | Or Prop Prop      -- disjunction
-          | Not Prop          -- negation
+-- propositions
+data Prop = Const Bool
+          | Var Char
+          | And Prop Prop
+          | Or Prop Prop
+          | Not Prop
           deriving Show
 
--- | a parser for propositions
--- Grammar rules:
---
--- prop     ::= term propCont
--- propCont ::= '|' term propCont | epsilon
---
--- term     ::= factor termCont
--- termCont ::= '&' factor termCont | epsilon
---
--- factor   ::= '!' factor | name | constant | '(' prop ')'
--- constant ::= 'T' | 'F'
-
+-- parser (& has higher precedence than |)
 prop :: Parser Prop
 prop = do t <- term
           propCont t
@@ -64,12 +47,11 @@ factor = do char '!'
             char ')'
             return p
 
--- | variable names: single lowercase letters
+-- variables are single lowercase letters
 name :: Parser Prop
 name = do c <- satisfy isLower
           return (Var c)
 
--- | boolean constants: 'T' and 'F'
 constant :: Parser Prop
 constant = do char 'T'
               return (Const True)
@@ -77,20 +59,56 @@ constant = do char 'T'
            do char 'F'
               return (Const False)
 
-----------------------------------------------------------------
+-- truth tables
+type Subst = [(Char, Bool)]
 
+find :: Char -> Subst -> Bool
+find x ((y, v):s) | x == y    = v
+                  | otherwise = find x s
+find _ []                     = False
+
+eval :: Subst -> Prop -> Bool
+eval _ (Const b) = b
+eval s (Var x)   = find x s
+eval s (And p q) = eval s p && eval s q
+eval s (Or p q)  = eval s p || eval s q
+eval s (Not p)   = not (eval s p)
+
+-- variables of a proposition (with duplicates)
+vars :: Prop -> [Char]
+vars (Const _) = []
+vars (Var x)   = [x]
+vars (And p q) = vars p ++ vars q
+vars (Or p q)  = vars p ++ vars q
+vars (Not p)   = vars p
+
+rmdups :: Eq a => [a] -> [a]
+rmdups []     = []
+rmdups (x:xs) = x : rmdups (filter (/= x) xs)
+
+bools :: Int -> [[Bool]]
+bools 0 = [[]]
+bools n = [b : bs | b <- [False, True], bs <- bools (n-1)]
+
+-- all possible assignments to the variables
+substs :: Prop -> [Subst]
+substs p = map (zip vs) (bools (length vs))
+  where vs = rmdups (vars p)
+
+truthTable :: Prop -> [(Subst, Bool)]
+truthTable p = [(s, eval s p) | s <- substs p]
+
+-- read-parse-print loop
 main :: IO ()
 main
   = do txt <- getContents
        calculator (lines txt)
 
--- | read-parse-print loop (temporary: shows the parse tree)
 calculator :: [String] -> IO ()
 calculator []     = return ()
 calculator (l:ls) = do putStrLn (showParse l)
                        calculator ls
 
--- | parse a single proposition and show the resulting tree
 showParse :: String -> String
 showParse txt
   = case parse prop txt of
